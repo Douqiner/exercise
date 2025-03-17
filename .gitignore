@@ -1,3 +1,5 @@
 .ipynb_checkpoints
 .idea/
-
+*.gz
+data/
+chap5_CNN/mnist
