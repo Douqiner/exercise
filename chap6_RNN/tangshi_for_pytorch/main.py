@@ -1,10 +1,11 @@
+import random
 import numpy as np
 import collections
 import torch
 from torch.autograd import Variable
 import torch.optim as optim
 
-import rnn
+import rnn as rnn_lstm
 
 start_token = 'G'
 end_token = 'E'
@@ -66,6 +67,7 @@ def process_poems2(file_name):
                 line = line.strip()
                 if line:
                     content = line.replace(' '' ', '').replace('，','').replace('。','')
+                    # content = line.replace(' '' ', '')
                     if '_' in content or '(' in content or '（' in content or '《' in content or '[' in content or \
                                     start_token in content or end_token in content:
                         continue
@@ -116,13 +118,21 @@ def generate_batch(batch_size, poems_vec, word_to_int):
         # exit(0)
         x_batches.append(x_data)
         y_batches.append(y_data)
+    # 随机打乱
+    # 生成随机索引
+    indices = list(range(len(x_batches)))
+    random.shuffle(indices)
+
+    # 根据随机索引重新排列两个列表
+    x_batches = [x_batches[i] for i in indices]
+    y_batches = [y_batches[i] for i in indices]
     return x_batches, y_batches
 
 
 def run_training():
     # 处理数据集
     # poems_vector, word_to_int, vocabularies = process_poems2('./tangshi.txt')
-    poems_vector, word_to_int, vocabularies = process_poems1('./poems.txt')
+    poems_vector, word_to_int, vocabularies = process_poems2('./chap6_RNN/tangshi_for_pytorch/tangshi.txt')
     # 生成batch
     print("finish  loadding data")
     BATCH_SIZE = 100
@@ -135,8 +145,9 @@ def run_training():
     optimizer=optim.RMSprop(rnn_model.parameters(), lr=0.01)
 
     loss_fun = torch.nn.NLLLoss()
-    # rnn_model.load_state_dict(torch.load('./poem_generator_rnn'))  # if you have already trained your model you can load it by this line.
+    rnn_model.load_state_dict(torch.load('./chap6_RNN/tangshi_for_pytorch/poem_generator_rnn'))  # if you have already trained your model you can load it by this line.
 
+    
     for epoch in range(30):
         batches_inputs, batches_outputs = generate_batch(BATCH_SIZE, poems_vector, word_to_int)
         n_chunk = len(batches_inputs)
@@ -157,7 +168,7 @@ def run_training():
                     print('prediction', pre.data.tolist()) # the following  three line can print the output and the prediction
                     print('b_y       ', y.data.tolist())   # And you need to take a screenshot and then past is to your homework paper.
                     print('*' * 30)
-            loss  = loss  / BATCH_SIZE
+            # loss  = loss  / BATCH_SIZE
             print("epoch  ",epoch,'batch number',batch,"loss is: ", loss.data.tolist())
             optimizer.zero_grad()
             loss.backward()
@@ -165,7 +176,7 @@ def run_training():
             optimizer.step()
 
             if batch % 20 ==0:
-                torch.save(rnn_model.state_dict(), './poem_generator_rnn')
+                torch.save(rnn_model.state_dict(), './chap6_RNN/tangshi_for_pytorch/poem_generator_rnn')
                 print("finish  save model")
 
 
@@ -187,18 +198,18 @@ def pretty_print_poem(poem):  # 令打印的结果更工整
         shige.append(w)
     poem_sentences = poem.split('。')
     for s in poem_sentences:
-        if s != '' and len(s) > 10:
+        if s != '':
             print(s + '。')
 
 
 def gen_poem(begin_word):
     # poems_vector, word_int_map, vocabularies = process_poems2('./tangshi.txt')  #  use the other dataset to train the network
-    poems_vector, word_int_map, vocabularies = process_poems1('./poems.txt')
+    poems_vector, word_int_map, vocabularies = process_poems2('./chap6_RNN/tangshi_for_pytorch/tangshi.txt')
     word_embedding = rnn_lstm.word_embedding(vocab_length=len(word_int_map) + 1, embedding_dim=100)
     rnn_model = rnn_lstm.RNN_model(batch_sz=64, vocab_len=len(word_int_map) + 1, word_embedding=word_embedding,
                                    embedding_dim=100, lstm_hidden_dim=128)
 
-    rnn_model.load_state_dict(torch.load('./poem_generator_rnn'))
+    rnn_model.load_state_dict(torch.load('./chap6_RNN/tangshi_for_pytorch/poem_generator_rnn'))
 
     # 指定开始的字
 
@@ -229,5 +240,4 @@ pretty_print_poem(gen_poem("湖"))
 pretty_print_poem(gen_poem("湖"))
 pretty_print_poem(gen_poem("湖"))
 pretty_print_poem(gen_poem("君"))
-
 
